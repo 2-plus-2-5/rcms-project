@@ -125,8 +125,29 @@ const GlobalStyles = () => (
 // ─── CONSTANTS & DATA ────────────────────────────────────────────────────────
 const C = { bg:"#0B1020",sur:"#121A2A",pri:"#6D5DF6",acc:"#D6A756",suc:"#3EB489",txt:"#F5F7FA",mut:"#8A94A6",dan:"#E06C75",blu:"#61AFEF",pur:"#C678DD",tea:"#56B6C2",grn:"#98C379" };
 const PAL = [C.pri,C.acc,C.suc,C.dan,C.blu,C.pur,C.tea,C.grn];
-const gc = n => PAL[n.charCodeAt(0)%PAL.length];
-const gi = n => n.split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase();
+const gc = (n: string) => PAL[n.charCodeAt(0)%PAL.length];
+const gi = (n: string) => n.split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase();
+
+// ─── TYPES ───────────────────────────────────────────────────────────────────
+type Member = typeof MEMBERS[number];
+type Config = {
+  name: string;
+  desc: string;
+  location: string;
+  email: string;
+  website: string;
+  notifyEvent: boolean;
+  notifyMember: boolean;
+  notifyDigest: boolean;
+  maxEvent: number;
+  autoWelcome: boolean;
+};
+type ConfirmConfig = {
+  title: string;
+  msg: string;
+  onConfirm: () => void;
+  variant?: "danger" | "info";
+};
 
 const IOPTS = [
   {l:"Literary Fiction",e:"📚"},{l:"Non-Fiction",e:"📖"},{l:"Poetry",e:"✍"},{l:"History",e:"🏛"},
@@ -178,12 +199,12 @@ const NOTIFS=[{id:1,text:"Kavya Patil just joined the community",time:"2m ago",i
 const BOOKS_HIST=[{title:"The God of Small Things",author:"Arundhati Roy",month:"Jun 2025",rating:4.8},{title:"Pachinko",author:"Min Jin Lee",month:"Apr 2025",rating:4.7},{title:"Normal People",author:"Sally Rooney",month:"Mar 2025",rating:4.1},{title:"Sapiens",author:"Yuval Noah Harari",month:"Feb 2025",rating:4.5},{title:"The Remains of the Day",author:"Kazuo Ishiguro",month:"Jan 2025",rating:4.8}];
 
 // ─── TOAST ───────────────────────────────────────────────────────────────────
-const ToastCtx = createContext(null);
-const useToast = () => useContext(ToastCtx);
+const ToastCtx = createContext<((msg: string, type?: string) => void) | null>(null);
+const useToast = () => useContext(ToastCtx)!;
 
 const ToastProvider = ({ children }) => {
-  const [toasts, setToasts] = useState([]);
-  const add = useCallback((msg, type = "success") => {
+  const [toasts, setToasts] = useState<Array<{id: number; msg: string; type: string; out: boolean}>>([]);
+  const add = useCallback((msg: string, type = "success") => {
     const id = Date.now() + Math.random();
     setToasts(p => [...p, { id, msg, type, out: false }]);
     setTimeout(() => {
@@ -191,7 +212,7 @@ const ToastProvider = ({ children }) => {
       setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 260);
     }, 3200);
   }, []);
-  const dismiss = id => {
+  const dismiss = (id: number) => {
     setToasts(p => p.map(t => t.id === id ? { ...t, out: true } : t));
     setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 260);
   };
@@ -268,7 +289,7 @@ const Lbl = ({ children }) => <p style={{ fontSize:12.5,fontWeight:500,color:C.m
 // ─── CONFIRM MODAL ───────────────────────────────────────────────────────────
 const ConfirmModal = ({ title, msg, onConfirm, onClose, variant="danger" }) => {
   useEffect(() => {
-    const h = e => { if(e.key==="Escape") onClose(); if(e.key==="Enter") { onConfirm(); onClose(); } };
+    const h = (e: KeyboardEvent) => { if(e.key==="Escape") onClose(); if(e.key==="Enter") { onConfirm(); onClose(); } };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, []);
@@ -300,7 +321,7 @@ const ConfirmModal = ({ title, msg, onConfirm, onClose, variant="danger" }) => {
 // ─── MEMBER DRAWER ───────────────────────────────────────────────────────────
 const MemberDrawer = ({ member, onClose, onProfile, onRemove }) => {
   useEffect(() => {
-    const h = e => { if(e.key==="Escape") onClose(); };
+    const h = (e: KeyboardEvent) => { if(e.key==="Escape") onClose(); };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, []);
@@ -394,7 +415,7 @@ const CommandPalette = ({ onClose, setView, setMember }) => {
   ];
 
   useEffect(() => {
-    const h = e => {
+    const h = (e: KeyboardEvent) => {
       if (e.key==="Escape") { onClose(); return; }
       if (e.key==="ArrowDown") { e.preventDefault(); setFoc(f=>Math.min(f+1, allItems.length-1)); }
       if (e.key==="ArrowUp")   { e.preventDefault(); setFoc(f=>Math.max(f-1, 0)); }
@@ -458,7 +479,7 @@ const CommandPalette = ({ onClose, setView, setMember }) => {
 const NotifPanel = ({ onClose }) => {
   const [notifs, setNotifs] = useState(NOTIFS);
   useEffect(() => {
-    const h = e => { if(e.key==="Escape") onClose(); };
+    const h = (e: KeyboardEvent) => { if(e.key==="Escape") onClose(); };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, []);
@@ -1175,8 +1196,8 @@ const InsightsView = () => {
 
 // ─── SETTINGS VIEW ───────────────────────────────────────────────────────────
 const SettingsView = ({ toast, openConfirm }) => {
-  const [cfg, setCfg] = useState({name:"Amravati Reads",desc:"A reading community in the heart of Amravati, Maharashtra.",location:"Amravati, Maharashtra",email:"amravatireads@gmail.com",website:"amravatireads.in",notifyEvent:true,notifyMember:true,notifyDigest:false,maxEvent:25,autoWelcome:true});
-  const s = (k,v) => setCfg(p=>({...p,[k]:v}));
+  const [cfg, setCfg] = useState<Config>({name:"Amravati Reads",desc:"A reading community in the heart of Amravati, Maharashtra.",location:"Amravati, Maharashtra",email:"amravatireads@gmail.com",website:"amravatireads.in",notifyEvent:true,notifyMember:true,notifyDigest:false,maxEvent:25,autoWelcome:true});
+  const s = (k: keyof Config, v: Config[keyof Config]) => setCfg(p=>({...p,[k]:v}));
   return <div className="page">
     <div className="up" style={{marginBottom:26}}><h1 style={{fontSize:27,fontWeight:700,color:C.txt}}>Settings</h1><p style={{color:C.mut,fontSize:13.5,marginTop:4}}>Configure your community preferences</p></div>
     <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:20}}>
@@ -1201,12 +1222,12 @@ const SettingsView = ({ toast, openConfirm }) => {
         <div className="card up d2" style={{padding:26}}>
           <h3 style={{fontSize:15,fontWeight:600,color:C.txt,marginBottom:18}}>Notifications</h3>
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            {[{k:"notifyEvent",lbl:"Event reminders",desc:"48h before each scheduled event"},{k:"notifyMember",lbl:"New member alerts",desc:"When someone joins the community"},{k:"notifyDigest",lbl:"Weekly digest",desc:"Community activity summary each Monday"}].map(item=>(
+            {([{k:"notifyEvent",lbl:"Event reminders",desc:"48h before each scheduled event"},{k:"notifyMember",lbl:"New member alerts",desc:"When someone joins the community"},{k:"notifyDigest",lbl:"Weekly digest",desc:"Community activity summary each Monday"}] as {k: keyof Config; lbl: string; desc: string}[]).map(item=>(
               <div key={item.k} style={{display:"flex",alignItems:"center",gap:12,padding:14,borderRadius:11,background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.06)",cursor:"pointer"}}
-                onClick={()=>{ s(item.k,!cfg[item.k]); toast(`${item.lbl} ${!cfg[item.k]?"enabled":"disabled"}`,"info"); }}>
-                <div className={`chk ${cfg[item.k]?"on":""}`}>{cfg[item.k]&&<Check size={11} color="#fff"/>}</div>
+                onClick={()=>{ s(item.k, !cfg[item.k] as boolean); toast(`${item.lbl} ${!cfg[item.k] as boolean?"enabled":"disabled"}`,"info"); }}>
+                <div className={`chk ${(cfg[item.k] as boolean)?"on":""}`}>{(cfg[item.k] as boolean)&&<Check size={11} color="#fff"/>}</div>
                 <div style={{flex:1}}><p style={{fontSize:13.5,fontWeight:500,color:C.txt}}>{item.lbl}</p><p style={{fontSize:12,color:C.mut}}>{item.desc}</p></div>
-                <span style={{fontSize:11.5,fontWeight:500,padding:"3px 10px",borderRadius:20,background:cfg[item.k]?"rgba(62,180,137,.12)":"rgba(138,148,166,.1)",color:cfg[item.k]?C.suc:C.mut,transition:"all .2s"}}>{cfg[item.k]?"On":"Off"}</span>
+                <span style={{fontSize:11.5,fontWeight:500,padding:"3px 10px",borderRadius:20,background:(cfg[item.k] as boolean)?"rgba(62,180,137,.12)":"rgba(138,148,166,.1)",color:(cfg[item.k] as boolean)?C.suc:C.mut,transition:"all .2s"}}>{(cfg[item.k] as boolean)?"On":"Off"}</span>
               </div>
             ))}
           </div>
@@ -1250,17 +1271,17 @@ function AppInner() {
   const toast       = useToast();
   const [view,      setView]      = useState("dashboard");
   const [loading,   setLoading]   = useState(false);
-  const [member,    setMember]    = useState(null);
+  const [member,    setMember]    = useState<Member | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [cmdOpen,   setCmdOpen]   = useState(false);
-  const [drawer,    setDrawer]    = useState(null);
-  const [confirm,   setConfirm]   = useState(null);
+  const [drawer,    setDrawer]    = useState<Member | null>(null);
+  const [confirm,   setConfirm]   = useState<ConfirmConfig | null>(null);
   const [notifOpen, setNotifOpen] = useState(false);
 
   const unread = NOTIFS.filter(n=>!n.read).length;
 
   // Smooth view transitions with skeleton
-  const navigate = useCallback((v) => {
+  const navigate = useCallback((v: string) => {
     if (v === view) return;
     setLoading(true);
     setTimeout(() => { setView(v); setLoading(false); }, 180);
@@ -1268,7 +1289,7 @@ function AppInner() {
 
   // Global keyboard shortcuts
   useEffect(() => {
-    const h = e => {
+    const h = (e: KeyboardEvent) => {
       // Cmd/Ctrl+K → command palette
       if ((e.metaKey || e.ctrlKey) && e.key === "k") { e.preventDefault(); setCmdOpen(c=>!c); return; }
       // Escape → close any open overlay
@@ -1278,8 +1299,8 @@ function AppInner() {
     return () => window.removeEventListener("keydown", h);
   }, []);
 
-  const openDrawer  = m   => { setDrawer(m); setNotifOpen(false); };
-  const openConfirm = cfg => setConfirm(cfg);
+  const openDrawer  = (m: Member) => { setDrawer(m); setNotifOpen(false); };
+  const openConfirm = (conf: ConfirmConfig) => setConfirm(conf);
   const commonProps = { toast, openConfirm };
   const sideW = collapsed ? 68 : 236;
 
@@ -1314,7 +1335,7 @@ function AppInner() {
       {cmdOpen && (
         <CommandPalette
           onClose={() => setCmdOpen(false)}
-          setView={v => { navigate(v); setCmdOpen(false); }}
+          setView={(v: string) => { navigate(v); setCmdOpen(false); }}
           setMember={setMember}
         />
       )}
